@@ -17,13 +17,15 @@ app.use(session({ // middleware for storing user info
     saveUninitialized: true,
     resave: false,
     cookie: {
-        maxAge: 1000 * 60 * 60 * 24 * 7 // milisends * seconds * minutes * hours * days
+        maxAge: 1000 * 60 * 60 * 24 * 7 // milisends * seconds * minutes * hours * days (7 days)
     },
   }
 ));
 app.use(passport.initialize());
 app.use(passport.session());
 // middleware function used in protected routes to ensure user is logged in
+// in the future I think im going to protect all routes and just redirect people to login if they aren't
+// or maybe have a landing page, so users can have option to relogin
 function isAuthenticated(req, res, next) {
     if (req.session.isAuthenticated) {
         // if user is authenticated, proceed 
