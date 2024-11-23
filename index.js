@@ -42,7 +42,10 @@ app.get('/', (req, res) => {
 
 // google auth route
 app.get('/auth/google', passport.authenticate('google', {scope: ['email']}));
-
+app.get('/api', (req,res)=> {
+    console.log("api hit");
+    res.json({user:"chet",age:21})
+});
 // define the callback route for Google
 app.get('/auth/google/callback', passport.authenticate('google', { failureRedirect: '/' }), (req, res) => {
     // successful authentication, redirect to another page
@@ -108,8 +111,8 @@ app.get('/delete', isAuthenticated, (req, res) => {
     accidently drop a table if we alter our model schema
 */
 db.sequelize.sync({alter: true}).then((req) => {
-    app.listen(3000, () => {
-        console.log("lsitneing on:  http://localhost:3000\n");
+    app.listen(3001, () => {
+        console.log("lsitneing on:  http://localhost:3001\n");
 
     });
 });
