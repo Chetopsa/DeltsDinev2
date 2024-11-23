@@ -12,7 +12,10 @@ git add -A                                 # -A adds all your new changes
 git commit -m "commit message"
 # 5. push changes to github                      
 git push -u origin <any-name>              # -u, means --setbranch-upstream
-# this command essentially will push you local git repo to the remote repo on github. the -u flag makes it so you don't have to specify remote repo in the future. origin is an alias for the link of the repo you initially cloned (https://github.com/Chetopsa/DeltsDineV2.git), and the last argument is the name of the branch you want to push.
+  # this command essentially will push you local git repo to the remote repo on github.
+  # The -u flag makes it so you don't have to specify remote repo in the future.
+  # Origin is an alias for the link of the repo you initially cloned (https://github.com/Chetopsa/DeltsDineV2.git),
+  # and the last argument is the name of the branch you want to push.
 ```
 
 <p>
