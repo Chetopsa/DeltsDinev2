@@ -11,6 +11,13 @@ const passport = require('./passport'); // import the passport configuration
 const db = require("./models");
 const {User, Meal, RSVP} = require('./models');
 
+const cors = require('cors'); // allows for cross orgin requests liek when using google auth
+app.use(cors({
+    origin: 'http://localhost:3000', // or your frontend's URL
+    methods: ['GET', 'POST'],
+  }));
+
+
 app.use(express.json()); // middleware for parsing
 app.use(session({ // middleware for storing user info
     secret: "pooperscooper",
@@ -35,16 +42,38 @@ function isAuthenticated(req, res, next) {
     res.status(401).send('Unauthorized: You must log in to access this resource.');
 }
 
+// middleware for checking if admin
+function isAdmin(req, res, next) {
+    if (req.session.isAdmin) {
+        // if user is authenticated, proceed 
+        return next();
+    }
+    // send error if not authenticated
+    console.log("Error: User tried accessing admin protected route");
+
+    res.status(401).send('Unauthorized: You must be admin');
+}
+
 // default route
 app.get('/', (req, res) => {
     res.send('hello world');
 });
 
 // google auth route
+
 app.get('/auth/google', passport.authenticate('google', {scope: ['email']}));
-app.get('/api', (req,res)=> {
-    console.log("api hit");
-    res.json({user:"chet",age:21})
+/** 
+ * API for checking if the curent session is validated
+ * @request GET
+ * @resonse {authorized: boolean, userID: int}
+ * 
+*/
+app.get('/api/validation', (req,res)=> {
+    if (req.session.isAuthenticated) {
+        res.json({authorized: true, userID:req.session.userID})
+    } else {
+        res.json({authorized: false})
+    }
 });
 // define the callback route for Google
 app.get('/auth/google/callback', passport.authenticate('google', { failureRedirect: '/' }), (req, res) => {
@@ -52,12 +81,11 @@ app.get('/auth/google/callback', passport.authenticate('google', { failureRedire
     req.session.isAuthenticated = true
     console.log(req.user.userID);
     if (req.user.firstName == null) {
-        //
-        console.log("set up new account");
+        req.session.userID = req.user.userID; // associate the UserID with the session object
+        res.redirect('http://localhost:3000/signUp?userID='+req.user.userID);
     } else {
-        res.redirect('/profile');
+        res.json({success: false, user: req.user.userID})
     }
-   
   }
 );
 // all routes
