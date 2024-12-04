@@ -6,9 +6,10 @@ const {secrets} = require('./google_keys.json')
 passport.use(new GoogleStrategy({
   clientID: secrets.client_id, // Replace with your Google client ID
   clientSecret: secrets.client_secret, // Replace with your Google client secret
-  callbackURL: 'http://localhost:3000/auth/google/callback'
+  callbackURL: 'http://localhost:3001/auth/google/callback' // needs to be updated (maybe not)
 }, async (accessToken, refreshToken, profile, done) => {
   try {
+    // handles logic for adding users to Database
     let email = profile.emails[0].value
     // console.log(profile);
     // Find or create user in your database

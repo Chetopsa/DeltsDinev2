@@ -1,25 +1,35 @@
-import React, {useEffect, useState} from 'react'
+import './index.css';
+import React, { useEffect, useState} from 'react'
+import {BrowserRouter, Routes, Route} from 'react-router-dom'
+
+import ProtectedRoutes from './utils/ProtectedRoutes'
+import Navbar from "./components/Navbar";
+
+// import pages
+import Login from './screens/login';
+import Home from './screens/home';
+import Menu from './screens/menu';
+
+
 
 function App(children) {
 
   const [backendData, setBackendData] = useState([{}])
-  useEffect(() => {
-    fetch("/api").then(
-      res => res.json()
-    ).then(
-      data => {
-        setBackendData(data)
-      }
-    )
-  }, [])
+  const [validated, setValidated] = useState(false);
 
   return (
-    <div>
-      <p>hellow world</p>
+      <BrowserRouter>
+        <Navbar/>
+        <Routes>
+          <Route element={<Login/>} path="/login"/>
+          <Route element={<ProtectedRoutes/>}>
+            <Route element={<Home/>} path="/"/>
+            <Route element={<Menu/>} path="/menu"/>
+          </Route>
+          
         
-         <p> {JSON.stringify(backendData)}</p>
-      
-      </div>
+        </Routes>
+      </BrowserRouter>
   )
 }
 
