@@ -1,12 +1,36 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { IoMenu, IoClose } from 'react-icons/io5';  // Icons for the hamburger menu and close icon
+
+
 
 function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
-
+  const navigate = useNavigate();
+  
   // Toggle the menu on click
   const toggleMenu = () => setIsOpen(!isOpen);
+
+  // logout function
+  const logout = async () => {
+    try {
+      const response = await fetch('http://localhost:3001/api/logout', {
+        method: 'POST',
+        credentials: 'include', // Include session cookies
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      if (response.ok) {
+        // On success, redirect to the login page
+        navigate('/login');
+      } else {
+        console.error('Logout failed:', await response.text());
+      }
+    } catch (error) {
+      console.error('Error during logout:', error);
+    }
+  };
 
   return (
     <nav className="bg-purple-700 text-white p-4">
@@ -43,6 +67,12 @@ function Navbar() {
           >
             Menu
           </Link>
+          <button
+            onClick={logout}
+            className="hover:text-purple-300 transition duration-200"
+          >
+            Logout
+          </button>
         </div>
       </div>
 
@@ -70,6 +100,15 @@ function Navbar() {
           >
             Menu
           </Link>
+          <button
+            onClick={() => {
+              logout();
+              setIsOpen(false);
+            }}
+            className="block text-lg hover:text-purple-300 transition duration-200"
+          >
+            Logout
+          </button>
         </div>
       </div>
     </nav>

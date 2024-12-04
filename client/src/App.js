@@ -4,13 +4,11 @@ import {BrowserRouter, Routes, Route} from 'react-router-dom'
 
 import ProtectedRoutes from './utils/ProtectedRoutes'
 import Navbar from "./components/Navbar";
-import { ValidationProvider } from './utils/ValidationContext'; // for user auth
 
 // import pages
 import Login from './screens/login';
 import Home from './screens/home';
 import Menu from './screens/menu';
-import UpdateMenu from './screens/updateMenu';
 
 
 
@@ -20,7 +18,6 @@ function App(children) {
   const [validated, setValidated] = useState(false);
 
   return (
-    <ValidationProvider>
       <BrowserRouter>
         <Navbar/>
         <Routes>
@@ -33,7 +30,6 @@ function App(children) {
         
         </Routes>
       </BrowserRouter>
-    </ValidationProvider>
   )
 }
 

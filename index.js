@@ -2,9 +2,10 @@
 require('dotenv').config();
 // include the express modules
 var express = require("express");
-var app = express();
 
 var session = require('express-session'); // import session to keep track of users
+var app = express();
+
 const passport = require('./passport'); // import the passport configuration
 
 // use sequelize orm for database
@@ -15,10 +16,12 @@ const cors = require('cors'); // allows for cross orgin requests liek when using
 app.use(cors({
     origin: 'http://localhost:3000', // or your frontend's URL
     methods: ['GET', 'POST'],
+    credentials: true, // allow cookies to be sent
   }));
 
 
 app.use(express.json()); // middleware for parsing
+
 app.use(session({ // middleware for storing user info
     secret: "pooperscooper",
     saveUninitialized: true,
@@ -28,8 +31,10 @@ app.use(session({ // middleware for storing user info
     },
   }
 ));
+
 app.use(passport.initialize());
 app.use(passport.session());
+
 // middleware function used in protected routes to ensure user is logged in
 // in the future I think im going to protect all routes and just redirect people to login if they aren't
 // or maybe have a landing page, so users can have option to relogin
@@ -69,6 +74,7 @@ app.get('/auth/google', passport.authenticate('google', {scope: ['email']}));
  * 
 */
 app.get('/api/validation', (req,res)=> {
+    console.log("user check auth api: " + req.session.isAuthenticated + "  user: " +req.session.userID);
     if (req.session.isAuthenticated) {
         res.json({authorized: true, userID:req.session.userID})
     } else {
@@ -76,18 +82,32 @@ app.get('/api/validation', (req,res)=> {
     }
 });
 // define the callback route for Google
-app.get('/auth/google/callback', passport.authenticate('google', { failureRedirect: '/' }), (req, res) => {
+app.get('/auth/google/callback', passport.authenticate('google', { failureRedirect: 'http://localhost:3000/' }), (req, res) => {
     // successful authentication, redirect to another page
     req.session.isAuthenticated = true
     console.log(req.user.userID);
     if (req.user.firstName == null) {
+        console.log(req.session.isAuthenticated +"\n");
         req.session.userID = req.user.userID; // associate the UserID with the session object
-        res.redirect('http://localhost:3000/signUp?userID='+req.user.userID);
+        // res.redirect('http://localhost:3000/signUp?userID='+req.user.userID);
+        res.redirect('http://localhost:3000/');
+
     } else {
         res.json({success: false, user: req.user.userID})
     }
   }
 );
+app.post('/api/logout', isAuthenticated, (req, res) => {
+    // Destroy the session and handle the result
+    req.session.destroy(err => {
+      if (err) {
+        console.error('Session destruction error:', err);
+        res.status(500).send('Could not log out, server error');
+      } else {
+        res.status(200).json({ success: true });
+      }
+    });
+  });
 // all routes
 // just a bunch of testing routes
 app.get('/profile', isAuthenticated, (req, res) => {
