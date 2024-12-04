@@ -18,18 +18,20 @@ function App(children) {
   const [validated, setValidated] = useState(false);
 
   return (
-      <BrowserRouter>
-        <Navbar/>
-        <Routes>
-          <Route element={<Login/>} path="/login"/>
-          <Route element={<ProtectedRoutes/>}>
-            <Route element={<Home/>} path="/"/>
-            <Route element={<Menu/>} path="/menu"/>
-          </Route>
+      
+        <BrowserRouter>
+          <Navbar/>
+          <Routes>
+            <Route element={<Login/>} path="/login"/>
+            <Route element={<ProtectedRoutes/>}>
+              <Route element={<Home/>} path="/"/>
+              <Route element={<Menu/>} path="/menu"/>
+            </Route>
+            
           
-        
-        </Routes>
-      </BrowserRouter>
+          </Routes>
+        </BrowserRouter>
+      
   )
 }
 

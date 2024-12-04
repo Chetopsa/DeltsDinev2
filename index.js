@@ -13,6 +13,7 @@ const db = require("./models");
 const {User, Meal, RSVP} = require('./models');
 
 const cors = require('cors'); // allows for cross orgin requests liek when using google auth
+const { user } = require('./config/config');
 app.use(cors({
     origin: 'http://localhost:3000', // or your frontend's URL
     methods: ['GET', 'POST'],
@@ -73,7 +74,7 @@ app.get('/auth/google', passport.authenticate('google', {scope: ['email']}));
  * @resonse {authorized: boolean, userID: int}
  * 
 */
-app.get('/api/validation', (req,res)=> {
+app.get('/api/validation', (req,res) => {
     console.log("user check auth api: " + req.session.isAuthenticated + "  user: " +req.session.userID);
     if (req.session.isAuthenticated) {
         res.json({authorized: true, userID:req.session.userID})
@@ -81,19 +82,40 @@ app.get('/api/validation', (req,res)=> {
         res.json({authorized: false})
     }
 });
+
+/**
+ * API for setting the users name and mealPLan status
+ * @request POST
+ * @body {firstName: string, lastName: string, hasMealPlan: bool}
+ * @response 200 ok || 500 server error
+ */
+ app.post('/api/setUser', isAuthenticated, async (req,res) => {
+    const {firstName, lastName, hasMealPlan} = req.body;
+    const parsedHasMealPlan =  hasMealPlan == "true" ? true : false; // prob back practice to convert to bool on backend, oh well..
+    try {
+        await User.update(
+            {firstName: firstName, lastName: lastName, hasMealPlan: parsedHasMealPlan},
+            { where: { userID: req.session.userID}}
+        );
+    } catch (err) {
+        console.log(err);
+        res.status(500).send("server error");
+    }
+    res.status(200).send("sucess!");
+ })
 // define the callback route for Google
 app.get('/auth/google/callback', passport.authenticate('google', { failureRedirect: 'http://localhost:3000/' }), (req, res) => {
     // successful authentication, redirect to another page
-    req.session.isAuthenticated = true
-    console.log(req.user.userID);
+    req.session.isAuthenticated = true;
+    req.session.userID = req.user.userID;
+    // console.log(req.user.userID);
     if (req.user.firstName == null) {
-        console.log(req.session.isAuthenticated +"\n");
-        req.session.userID = req.user.userID; // associate the UserID with the session object
-        // res.redirect('http://localhost:3000/signUp?userID='+req.user.userID);
-        res.redirect('http://localhost:3000/');
-
+        // console.log(req.session.isAuthenticated +"\n");
+         // associate the UserID with the session object
+        res.redirect('http://localhost:3000/?signUp=true');
+        // res.redirect('http://localhost:3000/');
     } else {
-        res.json({success: false, user: req.user.userID})
+        res.redirect('http://localhost:3000/?signUp=false');
     }
   }
 );
@@ -111,7 +133,6 @@ app.post('/api/logout', isAuthenticated, (req, res) => {
 // all routes
 // just a bunch of testing routes
 app.get('/profile', isAuthenticated, (req, res) => {
-  
   res.json({ message: `Welcome ${req.user.googleID}` });
 });
 
