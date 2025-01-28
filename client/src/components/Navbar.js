@@ -1,13 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useLayoutEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { IoMenu, IoClose } from 'react-icons/io5';  // Icons for the hamburger menu and close icon
+import { requestAuth } from '../utils/requestAuth';
 
 
 
 function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
+  const [admin, setAdmin] = useState(false);
+
   const navigate = useNavigate();
-  
+
   // Toggle the menu on click
   const toggleMenu = () => setIsOpen(!isOpen);
 
@@ -31,6 +34,30 @@ function Navbar() {
       console.error('Error during logout:', error);
     }
   };
+
+
+    
+    // const {validated} = useValidation();
+    // console.log("protected routes " + validated);
+    // // Handle loading state if validation is still being checked
+
+    // if (validated === null) {
+    //     return <div>Loading...</div>; // replace with loading ui
+    // }
+    
+    // console.log("validated value right after declaration:  " + validated);
+
+    useLayoutEffect( () => {
+      (async () => {
+        const validation = await requestAuth();
+        // console.log("isValidated: " + isValidated);
+        if (validation.isAdmin) {
+          setAdmin(true);
+        } else {
+          setAdmin(false);
+        }
+      })();
+    }, []);
 
   return (
     <nav className="bg-purple-700 text-white p-4">
@@ -67,6 +94,15 @@ function Navbar() {
           >
             Menu
           </Link>
+          {admin && (
+            <Link
+              to="/adminDashboard"
+              className="hover:text-purple-300 transition duration-200"
+            >
+              Admin Dashboard
+            </Link>
+          )}
+          
           <button
             onClick={logout}
             className="hover:text-purple-300 transition duration-200"
@@ -100,6 +136,16 @@ function Navbar() {
           >
             Menu
           </Link>
+
+          {admin && (
+            <Link
+            to="/adminDashboard"
+            onClick={() => setIsOpen(false)}
+            className="block text-lg hover:text-purple-300 transition duration-200"
+          >
+            Admin Panel
+          </Link>
+          )}
           <button
             onClick={() => {
               logout();

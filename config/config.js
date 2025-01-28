@@ -4,5 +4,6 @@ module.exports = {
     host: 'localhost',
     database: 'Deltdb',
     password: 'funny',
+    dialect: "postgres",
     port: 5432, // Default port for PostgreSQL
 };

@@ -19,8 +19,7 @@ app.use(cors({
     methods: ['GET', 'POST'],
     credentials: true, // allow cookies to be sent
   }));
-
-
+  
 app.use(express.json()); // middleware for parsing
 
 app.use(session({ // middleware for storing user info
@@ -75,13 +74,14 @@ app.get('/auth/google', passport.authenticate('google', {scope: ['email']}));
  * 
 */
 app.get('/api/validation', (req,res) => {
-    console.log("user check auth api: " + req.session.isAuthenticated + "  user: " +req.session.userID);
+    console.log("user check auth api: " + req.session.isAuthenticated + "  user: " +req.session.userID, " isAdmin: " + req.session.isAdmin);
     if (req.session.isAuthenticated) {
-        res.json({authorized: true, userID:req.session.userID})
+        res.json({authorized: true, userID:req.session.userID, isAdmin: req.session.isAdmin}); 
     } else {
         res.json({authorized: false})
     }
 });
+
 
 /**
  * API for setting the users name and mealPLan status
@@ -103,11 +103,25 @@ app.get('/api/validation', (req,res) => {
     }
     res.status(200).send("sucess!");
  })
+
 // define the callback route for Google
-app.get('/auth/google/callback', passport.authenticate('google', { failureRedirect: 'http://localhost:3000/' }), (req, res) => {
+app.get('/auth/google/callback', passport.authenticate('google', { failureRedirect: 'http://localhost:3000/' }), async (req, res) => {
     // successful authentication, redirect to another page
+
     req.session.isAuthenticated = true;
     req.session.userID = req.user.userID;
+
+    // fetch user isAdmin from db where userID = req.user.userID, to find admin status
+
+    await User.findOne({where: {userID: req.user.userID}})
+    .then((user) => {
+        req.session.isAdmin = user.isAdmin;
+        console.log("is admin: " + user.isAdmin);
+    })
+    .catch(err => {
+        console.log(err);
+    });
+    
     // console.log(req.user.userID);
     if (req.user.firstName == null) {
         // console.log(req.session.isAuthenticated +"\n");
@@ -130,13 +144,145 @@ app.post('/api/logout', isAuthenticated, (req, res) => {
       }
     });
   });
-// all routes
-// just a bunch of testing routes
+// calculate the week id helper function (difference in # of weeks from 2024-01-01)
+function calculateWeekID(date) {
+    const startDate = new Date('2024-01-01T00:00:00.000-06:00'); // Specify CST offset explicitly
+    console.log("DATE IN FUNCION: " + date);
+    const mealDate = new Date(date + "T00:00:00.000-06:00");
+
+    console.log(startDate +" <- start date, meal date -> " + mealDate);
+    const diffTime = Math.abs(mealDate - startDate);
+    const diffWeeks = Math.floor(diffTime / (1000 * 60 * 60 * 24 * 7));
+    console.log("diff weeks: " + diffWeeks);
+    return diffWeeks;
+}
+// sync database, a function that ensures that the number of rsvps is the same as the number of spots avaliable - 
+// ?? TODO
+
+// all routes 
+/**
+ * API for adding new meals to the database
+ * @request POST
+ * @body {mealDate: date(yyyy-mm-dd), mealDescription: string, isLunch: bool, spotsAvaliable: int}
+ * @response 200 ok || 500 server error
+ * Also calculates the weekID of the meal startign from 2024-01-01
+ */
+app.post('/api/addMeal', isAuthenticated, isAdmin, async (req, res) => {
+    
+    const {description, date, isDinner, spotsAvaliable} = req.body;
+    // console.log("meal Description: " + description + " mealDate: " + date + " isDinner: " + isDinner + " spotsAvaliable: " + spotsAvaliable);
+    
+    // calculate week id, so we can group meals by week
+    
+    const mealDate = new Date(date + "T00:00:00.000-06:00");
+    // console.log(startDate +" <- start date, meal date -> " + mealDate);
+    
+    const weekID_ = calculateWeekID(date);
+    // can't create new meal if one already exists for that date and time
+    const meal = await Meal.findOne({where: {date: mealDate, isDinner: isDinner}});
+    if (meal) {
+        console.log("[/api/addMeal] Meal already exists for that date\n");
+        res.status(500).send("Meal already exists for that date");
+        return;
+    }
+    // console.log("diff weeks: " + diffWeeks);
+    await Meal.create({
+        date: mealDate,
+        description: description,
+        isDinner: isDinner,
+        dayOfWeek: mealDate.getDay(),
+        spotsAvaliable: spotsAvaliable,
+        weekID: weekID_
+    }).then((meal) => {
+        res.status(200).send("Succesfully added meal")
+    }).catch(err => {
+        res.status(500).send("Server error when adding meal")
+        console.log(err);
+    });
+    // res.status(200).send("Succesfully added meal")
+});
+/**
+ * API for adding edditing meals in the database
+ * @request POST
+ * @body {mealDate: date(yyyy-mm-dd), mealDescription: string, isDinner: bool, spotsAvaliable: int}
+ * @response 200 ok || 500 server error
+ */
+app.post('/api/editMeal', isAuthenticated, isAdmin, async (req, res) => {
+    const {date, description, isDinner, spotsAvaliable} = req.body;
+    const mealDate = new Date(date + "T00:00:00.000-06:00");
+    try {
+        // find meal by date and isDinner, ensure meal exists
+        const meal = await Meal.findOne({where: {date: mealDate, isDinner: isDinner}});
+        if (!meal) {
+            res.status(500).send("Meal does not exist for that date");
+            return;
+        }
+        // update meal attributes if provided by client
+        await Meal.update({
+            description: description ? description : meal.description,
+            spotsAvaliable: spotsAvaliable ? spotsAvaliable : meal.spotsAvaliable
+        }, {where: {date: mealDate, isDinner: isDinner}});
+    } catch (err) {
+        console.log(err);
+        res.status(500).send("Server error when updating meal");
+    }
+}); 
+
+/**
+ * API for fetchiing current week meal info for user
+ * @request POST
+ * @body {Date: currentDate}
+ * @response {meals: [{mealID: int, mealName: string, mealDescription: string, mealDate: date}]}
+ */
+app.post('/api/getMenu', isAuthenticated, async (req, res) => {
+    try {
+        console.log("hit get menu endpoint\n");
+        
+        const {currentDate} = req.body;
+        console.log("date: " + currentDate);
+
+        if (!currentDate) {
+            res.status(400).send("not a valid date");
+        }
+        // get the week ID
+        const weekID_ = calculateWeekID(currentDate.split('T')[0]);
+
+        // incase we want to use current day for anything
+        const mealDate = new Date(currentDate + "T00:00:00.000-06:00");
+
+        // querty db for all meals for the week
+
+        const meals = await Meal.findAll({where: {weekID: weekID_}});
+        const packagedMeals = meals.map(meal => ({
+            mealID: meal.dataValues.mealID,
+            date: meal.dataValues.date.split('T')[0],
+            description: meal.dataValues.description,
+            isDinner: meal.dataValues.isDinner,
+            dayOfWeek: meal.dataValues.dayOfWeek,
+            spotsTaken: meal.dataValues.spotsTaken,
+            spotsAvailable: meal.dataValues.spotsAvaliable,
+            weekID: meal.dataValues.weekID
+        }));
+        if (!meals) {
+            res.status(500).send("Server error when fetching meals");
+        }
+        console.log(packagedMeals);
+        res.json({meals: packagedMeals});
+    } catch (err) {
+        console.log(err);
+        res.status(500).send("Server error when fetching meals");
+    }
+});
+
+app.post('/api/test', isAuthenticated, isAdmin, (req, res) => {
+
+});
+
 app.get('/profile', isAuthenticated, (req, res) => {
   res.json({ message: `Welcome ${req.user.googleID}` });
 });
 
-// is Autthenticated middleware used to protect routes if user is not signed in
+// ----------------below this are just testign routes----------------------------------
 app.get('/select', isAuthenticated, (req, res) => {
     User.findOne( {where: {firstName: "chet"}})
     .then((users) => {
@@ -146,7 +292,7 @@ app.get('/select', isAuthenticated, (req, res) => {
         console.log(err);
     });
 });
-app.get('/makeAdmin', isAuthenticated,(req, res) => {
+app.get('/makeAdmin', isAuthenticated, isAdmin, (req, res) => {
     console.log("hit make admin endpoint");
     User.create({
         firstName: "chet",
@@ -176,7 +322,7 @@ app.get('/delete', isAuthenticated, (req, res) => {
 });
 /*
     sequalize.sync ensures that our object model is the same as the actual db schema,
-    useful for devlopment but probably shouldn;t be used in production because we might
+    useful for devlopment but probably shouldn't be used in production because we might
     accidently drop a table if we alter our model schema
 */
 db.sequelize.sync({alter: true}).then((req) => {
