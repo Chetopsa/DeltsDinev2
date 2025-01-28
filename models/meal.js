@@ -18,13 +18,21 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: false
       },
       dayOfWeek: {
-        type: DataTypes.STRING(56),
-        allowNull: true
+        type: DataTypes.INTEGER,
+        allowNull: false
       },
       spotsTaken: {
         type: DataTypes.INTEGER,
         defaultValue: 0
-      }
+      }, 
+      spotsAvaliable: {
+        type: DataTypes.INTEGER,
+        defaultValue: 10
+      },
+      weekID: {
+        type: DataTypes.INTEGER,
+        allowNull: false
+      }, 
     }, {
       tableName: 'meal',
       timestamps: false

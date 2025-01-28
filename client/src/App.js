@@ -9,13 +9,14 @@ import Navbar from "./components/Navbar";
 import Login from './screens/login';
 import Home from './screens/home';
 import Menu from './screens/menu';
+import Unauthorized from './screens/unauthorized';
+import AdminDashboard from './screens/adminDashboard';
+
 
 
 
 function App(children) {
 
-  const [backendData, setBackendData] = useState([{}])
-  const [validated, setValidated] = useState(false);
 
   return (
       
@@ -23,9 +24,11 @@ function App(children) {
           <Navbar/>
           <Routes>
             <Route element={<Login/>} path="/login"/>
+            <Route element={<Unauthorized />} path="/unauthorized" />
             <Route element={<ProtectedRoutes/>}>
               <Route element={<Home/>} path="/"/>
               <Route element={<Menu/>} path="/menu"/>
+              <Route element={<AdminDashboard/>} path="/adminDashboard"/>
             </Route>
             
           

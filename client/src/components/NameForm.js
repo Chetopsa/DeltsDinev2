@@ -27,7 +27,7 @@ const NameForm = ({closeModal}) => {
             setSuccess(true);
             setTimeout(() => {
                 closeModal();
-            }, 1000); // 1 second delay
+            }, 500); // 1/2 second delay
         } else {
           throw new Error("Network response was not ok");
         }
