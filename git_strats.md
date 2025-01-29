@@ -35,7 +35,9 @@ git checkout main
 git pull
 # 3. checkout to new our existing branch to make changes
 git checkout <branch_name>      # goes to exisitng branch
+# or
 git checkout -b <branch_name>   # creates new branch
+# 4. Add changes commit and push
 git add -A
 git commit -m "commit message"
 git push
