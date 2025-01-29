@@ -231,11 +231,11 @@ const Menu = () => {
               : meal
           )
         );
+        setRegisteredMeals(prevRegistered => [...prevRegistered, mealID]);
       }
 
       setAlert({ type: "success", message: "Successfully RSVP'd to selected meals!" });
       setSelectedMeals([]);
-      setCurrentDate(currentDate);
     } catch (error) {
       setAlert({ type: "error", message: error.message || "Failed to RSVP" });
     }
