@@ -147,13 +147,13 @@ app.post('/api/logout', isAuthenticated, (req, res) => {
 // calculate the week id helper function (difference in # of weeks from 2024-01-01)
 function calculateWeekID(date) {
     const startDate = new Date('2024-01-01T00:00:00.000-06:00'); // Specify CST offset explicitly
-    console.log("DATE IN FUNCION: " + date);
+    // console.log("DATE IN FUNCION: " + date);
     const mealDate = new Date(date + "T00:00:00.000-06:00");
 
-    console.log(startDate +" <- start date, meal date -> " + mealDate);
+    // console.log(startDate +" <- start date, meal date -> " + mealDate);
     const diffTime = Math.abs(mealDate - startDate);
     const diffWeeks = Math.floor(diffTime / (1000 * 60 * 60 * 24 * 7));
-    console.log("diff weeks: " + diffWeeks);
+    // console.log("diff weeks: " + diffWeeks);
     return diffWeeks;
 }
 // sync database, a function that ensures that the number of rsvps is the same as the number of spots avaliable - 
@@ -255,7 +255,7 @@ app.post('/api/getMenu', isAuthenticated, async (req, res) => {
         const meals = await Meal.findAll({where: {weekID: weekID_}});
         const packagedMeals = meals.map(meal => ({
             mealID: meal.dataValues.mealID,
-            date: meal.dataValues.date.split('T')[0],
+            date: meal.dataValues.date.toISOString().split('T')[0],
             description: meal.dataValues.description,
             isDinner: meal.dataValues.isDinner,
             dayOfWeek: meal.dataValues.dayOfWeek,
@@ -271,6 +271,152 @@ app.post('/api/getMenu', isAuthenticated, async (req, res) => {
     } catch (err) {
         console.log(err);
         res.status(500).send("Server error when fetching meals");
+    }
+});
+/**
+ * API for creating a new rsvp on a given mealID
+ * @request POST
+ * @body {meals: [{mealID: int}]}
+ * @response {success: bool, message: string}
+ */
+app.post('/api/newRSVP', isAuthenticated, async (req, res) => {
+    const {mealID} = req.body;
+    console.log(mealID);
+    if (mealID == null) {
+        res.json({success: false, message: "No mealID provided"});
+        return;
+    }
+    const userID = req.session.userID;
+    const user = await User.findOne({where: {userID: userID}});
+    const meal = await Meal.findOne({where: {mealID: mealID}});
+
+    // handle failure cases
+    if (!user || !meal) {
+        res.json({success: false, message: "User or meal not found"});
+        return;
+    }
+    // make sure user isn't on full meal plan
+    if (user.hasMealPlan == true) {
+        res.json({success: false, message: "User is on a full meal plan"});
+        return;
+    }
+    //make sure meal is't monday dinner
+    if (meal.isDinner && meal.dayOfWeek == 1) {
+        res.json({success: false, message: "Can't register for Monday Dinner"});
+        return;
+    }
+    // check to make sure user isn't already registered for 2 meals 
+    const rsvps = await RSVP.findAll({where: {userID: userID, weekID: meal.weekID}});
+    if(rsvps.length >= 2) {
+        res.json({success: false, message: "User is already registered for 2 meals this week"});
+        return;
+    }
+    // check if user has already registerefd for the meal
+    const checkRegistered = await RSVP.findOne({where: {userID: userID, mealID: mealID}});
+    if (checkRegistered) {
+        res.json({success: false, message: "User is already registered for the meal"});
+        return;
+    }
+    // check if meal is full
+    if (meal.spotsTaken >= meal.spotsAvaliable) {
+        res.json({success: false, message: "Meal is full"});
+        return;
+    }
+    // create new RSVP
+    try {
+        await RSVP.create({ mealID: mealID, userID: userID, weekID: meal.weekID});
+        // update meal spots taken
+        await Meal.update({spotsTaken: meal.spotsTaken + 1}, {where: {mealID: mealID}});
+        res.json({success: true, message: "RSVP created"});
+    } catch (err) {
+        console.log(err);
+        res.json({success: false, message: "Server error when creating RSVP"});
+    }
+
+});
+/** API for deleteing RSVPS
+ * @request POST
+ * @body {mealID: int}
+ * @response {success: bool, message: string}
+ */
+app.post('/api/deleteRSVP', isAuthenticated, async (req, res) => {
+    const {mealID} = req.body;
+    const userID = req.session.userID;
+    const user = await User.findOne({where: {userID: userID}});
+    const meal = await Meal.findOne({where: {mealID: mealID}});
+    if (!user || !meal) {
+        res.json({success: false, message: "User or meal not found"});
+        return;
+    }
+    //check if registered for full meal plan
+    if (user.hasMealPlan == true) {
+        res.json({success: false, message: "User is on a full meal plan"});
+        return;
+    }
+    // check if meal is monday dinner
+    if (meal.isDinner && meal.dayOfWeek == 1) {
+        res.json({success: false, message: "Can't unregister for Monday Dinner"});
+        return;
+    }
+    // make sure user was registered for the meal
+    const checkRegistered = await RSVP.findOne({where: {userID: userID, mealID: mealID}});
+    if (!checkRegistered) {
+        res.json({success: false, message: "User is not registered for the meal"});
+        return;
+    }
+    // delete the RSVP
+    try {
+        await RSVP.destroy({where: {userID: userID, mealID: mealID}});
+        // update meal spots taken
+        await Meal.update({spotsTaken: meal.spotsTaken - 1}, {where: {mealID: mealID}});
+        res.json({success: true, message: "RSVP deleted"});
+    } catch (err) {
+        console.log(err);
+        res.json({success: false, message: "Server error when deleting RSVP"});
+    }
+});
+/** API for fetchin current weeks RSVP data
+ * @request GET
+ * @query ?date=Date
+ * @response {rsvps: [{mealID: int, users: [{name: string}]}], selectedMeals: [int]}
+ */
+app.get('/api/getRSVPs', isAuthenticated, async (req, res) => {
+   // get the date from the query parameters
+    const date = req.query.date;
+    if (!date) {
+        res.status(400).send("No date provided");
+        return;
+    }
+    // console.log(typeof date + " <-- type of date  ");
+    const weekID = calculateWeekID(date.split('T')[0]);
+    if (!weekID) {
+        res.status(400).send("No weekID provided");
+    }
+    try {
+        const currentUserSelectedMeals = [];
+        const meals = await Meal.findAll({where: {weekID: weekID}});
+        const packagedRSVPs = [];
+        for (const meal of meals) {
+            const rsvps = await RSVP.findAll({where: {mealID: meal.mealID}});
+            for (const rsvp of rsvps) {
+                const users = await User.findAll({where: {userID: rsvp.userID}});
+                fullNames = [];
+                users.forEach(user => {
+                    fullNames.push(user.firstName + " " + user.lastName);
+                    if (user.userID === req.session.userID) {
+                        
+                        currentUserSelectedMeals.push(meal.mealID);
+                    }
+                });
+            }
+            let mealRoster = {mealID: meal.mealID, users: fullNames};
+            packagedRSVPs.push(mealRoster); 
+        }
+        // console.log("request ", currentUserSelectedMeals);
+        res.json({rsvps: packagedRSVPs, selectedMeals: currentUserSelectedMeals});
+    } catch (err) {
+        console.log(err);
+        res.status(500).send("Server error when fetching RSVPs");
     }
 });
 
