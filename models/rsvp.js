@@ -20,7 +20,11 @@ module.exports = (sequelize, DataTypes) => {
           model: 'user',
           key: 'userID'
         }
-      }
+      },
+      weekID: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+      },
     }, {
       tableName: 'rsvp',
       timestamps: false

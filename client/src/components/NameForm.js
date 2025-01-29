@@ -87,7 +87,7 @@ const NameForm = ({closeModal}) => {
               htmlFor="hasMealPlan"
               className="block text-gray-700 text-sm font-bold mb-2"
             >
-              Do you have a full meal plan (Most live ins):
+              Do you live in / pay for the full meal plan?:
             </label>
             <select
               name="hasMealPlan"
