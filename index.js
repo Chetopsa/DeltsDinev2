@@ -14,6 +14,7 @@ const {User, Meal, RSVP} = require('./models');
 
 const cors = require('cors'); // allows for cross orgin requests liek when using google auth
 const { user } = require('./config/config');
+const FRONTENDURL = "http://localhost:3000";
 app.use(cors({
     origin: 'http://localhost:3000', // or your frontend's URL
     methods: ['GET', 'POST'],
@@ -70,7 +71,7 @@ app.get('/auth/google', passport.authenticate('google', {scope: ['email']}));
 /** 
  * API for checking if the curent session is validated
  * @request GET
- * @resonse {authorized: boolean, userID: int}
+ * @resonse {authorized: boolean, userID: int || null, isAdmin: boolean || null}
  * 
 */
 app.get('/api/validation', (req,res) => {
@@ -226,6 +227,34 @@ app.post('/api/editMeal', isAuthenticated, isAdmin, async (req, res) => {
         console.log(err);
         res.status(500).send("Server error when updating meal");
     }
+});
+/**
+ * API for deleting meals from the db
+ * @request POST
+ * @body {mealID: int}
+ * @response 200 ok || 500 server error
+ */
+app.post('api/deleteMeal', isAuthenticated, isAdmin, async (req, res) => {
+    console.log("hit delete meal endpoint");
+    const {mealID} = req.body;
+    if (!mealID) {
+        res.status(400).send("no Meal provided");
+        return;
+    }
+    try {
+        await RSVP.destroy({where: {mealID: mealID}});
+        const meal = await Meal.findOne({where: {mealID: mealID}});
+        if (!meal) {
+            res.status(500).send("Meal does not exist");
+            return;
+        }
+        await Meal.destroy({where: {mealID: mealID}});
+        res.status(200).send("Meal deleted");
+    } catch (err) {
+        console.log(err);
+        res.status(500).send("Server error when deleting meal");
+    }
+
 }); 
 
 /**
@@ -236,10 +265,10 @@ app.post('/api/editMeal', isAuthenticated, isAdmin, async (req, res) => {
  */
 app.post('/api/getMenu', isAuthenticated, async (req, res) => {
     try {
-        console.log("hit get menu endpoint\n");
+        // console.log("hit get menu endpoint\n");
         
         const {currentDate} = req.body;
-        console.log("date: " + currentDate);
+        // console.log("date: " + currentDate);
 
         if (!currentDate) {
             res.status(400).send("not a valid date");
@@ -249,7 +278,6 @@ app.post('/api/getMenu', isAuthenticated, async (req, res) => {
 
         // incase we want to use current day for anything
         const mealDate = new Date(currentDate + "T00:00:00.000-06:00");
-
         // querty db for all meals for the week
 
         const meals = await Meal.findAll({where: {weekID: weekID_}});
@@ -266,7 +294,7 @@ app.post('/api/getMenu', isAuthenticated, async (req, res) => {
         if (!meals) {
             res.status(500).send("Server error when fetching meals");
         }
-        console.log(packagedMeals);
+        // console.log(packagedMeals);
         res.json({meals: packagedMeals});
     } catch (err) {
         console.log(err);
@@ -396,20 +424,23 @@ app.get('/api/getRSVPs', isAuthenticated, async (req, res) => {
         const currentUserSelectedMeals = [];
         const meals = await Meal.findAll({where: {weekID: weekID}});
         const packagedRSVPs = [];
+        
         for (const meal of meals) {
+            let fullNames = [];
             const rsvps = await RSVP.findAll({where: {mealID: meal.mealID}});
             for (const rsvp of rsvps) {
                 const users = await User.findAll({where: {userID: rsvp.userID}});
-                fullNames = [];
+                
                 users.forEach(user => {
                     fullNames.push(user.firstName + " " + user.lastName);
                     if (user.userID === req.session.userID) {
-                        
                         currentUserSelectedMeals.push(meal.mealID);
                     }
                 });
             }
+            
             let mealRoster = {mealID: meal.mealID, users: fullNames};
+           
             packagedRSVPs.push(mealRoster); 
         }
         // console.log("request ", currentUserSelectedMeals);
@@ -438,23 +469,35 @@ app.get('/select', isAuthenticated, (req, res) => {
         console.log(err);
     });
 });
-app.get('/makeAdmin', isAuthenticated, isAdmin, (req, res) => {
+/**
+ * API for making someone an admin
+ * @request POST
+ * @body {firstName: string, lastName: string, email: string || null}
+ * @response 200 ok || 500 error
+ */
+app.post('/makeAdmin', isAuthenticated, isAdmin, (req, res) => {
     console.log("hit make admin endpoint");
-    User.create({
-        firstName: "chet",
-        lastName: "opsasnick",
-        hasMealPlan: false,
-        isAdmin: true,
-        
-    }).catch(err => {
-        if (err) {
-            console.log(err);
+    const {firstName, lastName, email} = req.body;
+    try {
+        const users = User.findAll({where: {firstName: firstName, lastName: lastName}});
+        if (users.length == 1) {
+            User.update({isAdmin: true }, {where: {firstName: firstName, lastName: lastName}});
+            res.status(200).send("successfully made new admin");
+        } else if (users.length != 1 && email == null) {
+            res.status(400).send("Multiple users with that name, please provide email");
+        } else {
+            User.update({isAdmin: true }, {where: {email: email}});s
+            res.status(200).send("successfully made new admin");
         }
-    })
-    console.log("success");
-    res.send('insert');
+    
+    } catch (err) {
+        res.status(500).send("Server error when making admin");
+        console.log("makeAdmin Errored: \n" + err);
+    }
+    console.log("successfullly made admin: " + firstName + " " + lastName);
 });
-app.get('/delete', isAuthenticated, (req, res) => {
+    
+app.get('/deletequew392934', isAuthenticated, isAdmin, (req, res) => {
     User.destroy({where: {isAdmin: False}})
     .then(result => {
 

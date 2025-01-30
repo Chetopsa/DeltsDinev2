@@ -1,6 +1,6 @@
 export async function requestAuth() {
     let ret = null;
-    await fetch('http://localhost:3001/api/validation', {
+    await fetch('/api/validation', {
         method: 'GET',
         credentials: 'include', // ensure cookies are sent with the request
     })

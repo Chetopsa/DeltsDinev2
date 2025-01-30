@@ -12,7 +12,7 @@ const NameForm = ({closeModal}) => {
   console.log(inputs);
   const handleSubmit = (e) => {
     e.preventDefault();
-    fetch("http://localhost:3001/api/setUser", {
+    fetch("/api/setUser", {
       headers: {
         "Content-Type": "application/json",
       },

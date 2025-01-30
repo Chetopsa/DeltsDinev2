@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { ChevronLeft, ChevronRight, Calendar, X, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar, X } from "lucide-react";
+import MenuItem from "../components/MenuItem";
 
 const Alert = ({ message, type, onClose }) => {
   return (
@@ -72,43 +73,6 @@ const WeekNavigator = ({ currentDate, onPreviousWeek, onNextWeek }) => {
   );
 };
 
-const MenuItem = ({ item, onSelect, isSelected, disabled, onDelete, isRegistered }) => {
-  const isFull = item.spotsTaken >= item.spotsAvaliable;
-  const status = isFull ? "Full" : "Open";
-  
-  return (
-
-    <div
-      onClick={!isFull && !disabled && !isRegistered ? () => onSelect(item.mealID) : undefined}
-      className={`flex flex-col items-center justify-center p-4 rounded-md shadow-md w-64 mt-4 
-        ${isFull || disabled ? "bg-gray-300" : isSelected ? "bg-blue-100" : "bg-white hover:bg-gray-100"}`}
-    >
-      <h2 className="text-lg font-semibold mb-1">
-        {item.day} ({item.isDinner ? "Dinner" : "Lunch"})
-      </h2>
-      <p className="text-gray-500 mb-2">{item.date}</p>
-      <p className="text-gray-700 mb-2">{item.description}</p>
-      <p className={`text-sm font-bold ${isFull ? "text-red-500" : "text-green-500"}`}>
-        {status}
-      </p>
-      <p className="text-gray-500">
-        Spots taken: {item.spotsTaken}/{item.spotsAvaliable}
-      </p>
-      {isRegistered ? (
-        <button
-          onClick={() => onDelete(item.mealID)}
-          className="mt-2 flex items-center gap-2 px-3 py-1 text-red-600 hover:text-red-800 hover:bg-red-100 rounded-lg transition-colors"
-          aria-label="Cancel RSVP"
-        >
-          <Trash2 className="h-4 w-4" />
-          <span>Cancel RSVP</span>
-        </button>
-      ) : (
-        undefined
-      )}
-    </div>
-  );
-};
 
 const Menu = () => {
   const [meals, setMeals] = useState([]);
@@ -116,11 +80,27 @@ const Menu = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedMeals, setSelectedMeals] = useState([]);
   const [alert, setAlert] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
+    // get isAdmin status
+    const fetchIsAdmin = async () => {
+      try {
+        const res = await fetch("/api/validation", {
+          method: "GET",
+          credentials: "include",
+        });
+        if (!res.ok) throw new Error("Server gave bad response for isAdmin");
+        const data = await res.json();
+        setIsAdmin(data.isAdmin);
+      } catch (err) {
+        console.error("Error fetching isAdmin:", err);
+      }
+    };
+    fetchIsAdmin();
     const fetchMenu = async () => {
       try {
-        const res = await fetch("http://localhost:3001/api/getMenu", {
+        const res = await fetch("/api/getMenu", {
           headers: { "content-type": "application/json" },
           method: "POST",
           credentials: "include",
@@ -147,46 +127,42 @@ const Menu = () => {
         transformedMeals.sort((a, b) => a.dayOfWeek - b.dayOfWeek);
         console.log(transformedMeals)
         setMeals(transformedMeals);
+        fetchRSVPS(transformedMeals);
       } catch (err) {
         console.error("Error fetching menu:", err);
         setAlert({ type: "error", message: "Failed to load menu" });
       }
     };
-    const fetchRSVPS = async () => {
+    const fetchRSVPS = async (updatedMeals) => {
       try {
-        const res = await fetch("http://localhost:3001/api/getRSVPs?date=" +currentDate.toISOString(), {
+        const res = await fetch("/api/getRSVPs?date=" +currentDate.toISOString(), {
           method: "GET",
           credentials: "include",
         });
         if (!res.ok) throw new Error("Server gave bad response for getting RSVPs");
         const data = await res.json();
         //set the meals to include the names of the rsvp associated with each meal ID
-        const updatedMeals = meals.map(meal => {
-          if (meal.mealID === data.rsvps.mealID) {
-            return {
-              ...meal,
-              names: [...meal.names, ...data.rsvps.users]
-            };
-          }
-          return meal;
+        // Update meals with RSVP data using latest state
+        const mealsWithRSVPs = updatedMeals.map(meal => {
+          const rsvpEntry = data.rsvps.find(item => item.mealID === meal.mealID);
+          return rsvpEntry ? { ...meal, names: rsvpEntry.users } : meal;
         });
+
+        // Set updated meals
+        setMeals(mealsWithRSVPs);
+      
+        // Update the state with the new meals data
         
-        // setMeals(updatedMeals);
+        console.log("updated meals: " + mealsWithRSVPs);
+        
         setRegisteredMeals(data.selectedMeals);
-        console.log("Registered meals: " +registeredMeals);
-        
+        console.log("Registered meals: " + registeredMeals);
       } catch (err) {
         console.log("failed to fetch rsvps's: " + err)
       }
     };
-    try {
-      fetchMenu();
-    } catch (err) {
-      console.log("opsie, " + err)
-    } finally {
-      fetchRSVPS();
-    }
-    
+    fetchMenu();
+
   }, [currentDate]);
 
   const handleMealSelect = (mealID) => {
@@ -211,7 +187,7 @@ const Menu = () => {
     try {
       for (const mealID of selectedMeals) {
         console.log("selected meals " , mealID);
-        const response = await fetch("http://localhost:3001/api/newRSVP", {
+        const response = await fetch("/api/newRSVP", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
@@ -260,7 +236,7 @@ const Menu = () => {
 
   const handleDeleteRSVP = async (mealID) => {
     try {
-      const response = await fetch("http://localhost:3001/api/deleteRSVP", {
+      const response = await fetch("/api/deleteRSVP", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -278,7 +254,8 @@ const Menu = () => {
         prevRegistered.filter(id => id !== mealID)
       );
       // Refetch the menu to get updated counts by resetting date
-      setCurrentDate(currentDate);
+      setCurrentDate(new Date(currentDate));
+
 
       setAlert({ 
         type: "success", 
@@ -291,6 +268,23 @@ const Menu = () => {
       });
     }
   };
+  const handleDeleteItem = async (mealID) => {
+    try {
+      const res = await fetch("/api/deleteMeal", {
+        methond: "POST",
+        body: JSON.stringify({ mealID }),
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (!data.success) {
+        throw new Error("error deletign messages");
+      }
+    } catch (err) {
+      setAlert({ type: "error", message: "Failed to delete meal" });
+      console.log("failed to delete meal: " +err);
+    }
+  }
 
   return (
     <div className="flex flex-col items-center">
@@ -320,8 +314,8 @@ const Menu = () => {
       )}
 
       <div className="w-full mb-8">
-        <h2 className="text-2xl font-semibold text-center">Lunch</h2>
-        <div className="flex flex-wrap justify-center gap-4">
+        <h2 className="text-2xl font-semibold mb-4 text-center">Lunch</h2>
+        <div className="flex overflow-x-auto pb-4 gap-2 justify-center">
           {lunchMeals.map((meal) => (
             <MenuItem
               key={meal.mealID}
@@ -330,29 +324,31 @@ const Menu = () => {
               onDelete={handleDeleteRSVP}
               isSelected={selectedMeals.includes(meal.mealID)}
               isRegistered={registeredMeals.includes(meal.mealID)}
-              disabled={selectedMeals.length >= 2 && !selectedMeals.includes(meal.mealID)}
+              disabled={selectedMeals.length + registeredMeals.length >= 2 && !selectedMeals.includes(meal.mealID)}
             />
           ))}
         </div>
       </div>
 
       <div className="w-full">
-        <h2 className="text-2xl font-semibold text-center">Dinner</h2>
-        <div className="flex flex-wrap justify-center gap-4">
-          {dinnerMeals.map((meal) => (
-            <MenuItem
-              key={meal.mealID}
-              item={meal}
-              onSelect={handleMealSelect}
-              onDelete={handleDeleteRSVP}
-              isSelected={selectedMeals.includes(meal.mealID)}
-              isRegistered={registeredMeals.includes(meal.mealID)}
-              disabled={selectedMeals.length >= 2 && !selectedMeals.includes(meal.mealID)}
-            />
-          ))}
-        </div>
+      <h2 className="text-2xl font-semibold mb-4 text-center">Dinner</h2>
+      <div className="flex overflow-x-auto pb-4 gap-2 justify-center">
+        {dinnerMeals.map((meal) => (
+          <MenuItem
+            key={meal.mealID}
+            item={meal}
+            onSelect={handleMealSelect}
+            onDelete={handleDeleteRSVP}
+            onDeleteItem={handleDeleteItem}
+            isAdmin={isAdmin}
+            isSelected={selectedMeals.includes(meal.mealID)}
+            isRegistered={registeredMeals.includes(meal.mealID)}
+            disabled={selectedMeals.length + registeredMeals.length >= 2 && !selectedMeals.includes(meal.mealID)}
+          />
+        ))}
       </div>
     </div>
+  </div>
   );
 };
 
