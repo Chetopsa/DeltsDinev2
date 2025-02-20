@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {Button} from './ui/Button';
 import { Card, CardHeader, CardTitle, CardContent } from './ui/Card';
 import Alert from './ui/Alert';
+import apiUrl from '../utils/global';
 
 function getDateOnly(date) {
   const d = new Date(date);
@@ -85,7 +86,7 @@ const BulkAddMeals = () => {
       
       if (descriptions[dayName].lunch) {
         mealPromises.push(
-          fetch("/api/addMeal", {
+          fetch(apiUrl.url+"/api/addMeal", {
             headers: { "content-type": "application/json" },
             method: "POST",
             credentials: "include",
@@ -102,7 +103,7 @@ const BulkAddMeals = () => {
       // Add dinner if description exists
       if (descriptions[dayName].dinner) {
         mealPromises.push(
-          fetch("/api/addMeal", {
+          fetch(apiUrl.url+"/api/addMeal", {
             headers: { "content-type": "application/json" },
             method: "POST",
             credentials: "include",

@@ -36,7 +36,7 @@ const MenuItem = ({ item, onSelect, isSelected, isAdmin, disabled, onDelete, onD
         rounded-lg 
         shadow-md 
         w-48
-        h-76
+        h-64
         mx-2
         transition-all
         duration-200
@@ -71,7 +71,7 @@ const MenuItem = ({ item, onSelect, isSelected, isAdmin, disabled, onDelete, onD
       </div>
 
       <p className="text-sm text-gray-700 text-center flex-grow">
-        {item.description} CRAZY CHICKEN WITH PORK AND RICE AND JUCIE FOR DESSERT LOTS OF STUFF FOR DESSERT
+        {item.description}
       </p>
       {isHovered && item.names.length > 0 && (
         <div className="mt-2 w-full max-h-18 overflow-y-auto text-center px-2 border-t border-gray-200 pt-1">

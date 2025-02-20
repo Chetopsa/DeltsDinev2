@@ -1,6 +1,8 @@
+import apiUrl from './global';
+
 export async function requestAuth() {
     let ret = null;
-    await fetch('/api/validation', {
+    await fetch(apiUrl.url+'/api/validation', {
         method: 'GET',
         credentials: 'include', // ensure cookies are sent with the request
     })

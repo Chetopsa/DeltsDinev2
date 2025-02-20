@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight, Calendar, X } from "lucide-react";
 import MenuItem from "../components/MenuItem";
+import apiUrl from "../utils/global";
 
 const Alert = ({ message, type, onClose }) => {
   return (
@@ -86,7 +87,7 @@ const Menu = () => {
     // get isAdmin status
     const fetchIsAdmin = async () => {
       try {
-        const res = await fetch("/api/validation", {
+        const res = await fetch(apiUrl.url+"/api/validation", {
           method: "GET",
           credentials: "include",
         });
@@ -102,7 +103,7 @@ const Menu = () => {
     console.log("dateString: " + dateString);
     const fetchMenu = async () => {
       try {
-        const res = await fetch("/api/getMenu", {
+        const res = await fetch(apiUrl.url+"/api/getMenu", {
           headers: { "content-type": "application/json" },
           method: "POST",
           credentials: "include",
@@ -137,7 +138,7 @@ const Menu = () => {
     };
     const fetchRSVPS = async (updatedMeals) => {
       try {
-        const res = await fetch("/api/getRSVPs?date=" +currentDate.toISOString().split('T')[0], {
+        const res = await fetch(apiUrl.url+"/api/getRSVPs?date=" +currentDate.toISOString().split('T')[0], {
           method: "GET",
           credentials: "include",
         });
@@ -189,7 +190,7 @@ const Menu = () => {
     try {
       for (const mealID of selectedMeals) {
         console.log("selected meals " , mealID);
-        const response = await fetch("/api/newRSVP", {
+        const response = await fetch(apiUrl.url+"/api/newRSVP", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
@@ -238,7 +239,7 @@ const Menu = () => {
 
   const handleDeleteRSVP = async (mealID) => {
     try {
-      const response = await fetch("/api/deleteRSVP", {
+      const response = await fetch(apiUrl.url+"/api/deleteRSVP", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -272,7 +273,7 @@ const Menu = () => {
   };
   const handleDeleteItem = async (mealID) => {
     try {
-      const res = await fetch("/api/deleteMeal", {
+      const res = await fetch(apiUrl.url+"/api/deleteMeal", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

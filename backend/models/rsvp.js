@@ -32,10 +32,14 @@ module.exports = (sequelize, DataTypes) => {
   
     RSVP.associate = models => {
       RSVP.belongsTo(models.User, {
-        foreignKey: 'userID'
+        foreignKey: 'userID',
+        onDelete: 'CASCADE',  // Adding cascading behavior
+        onUpdate: 'CASCADE'
       });
       RSVP.belongsTo(models.Meal, {
-        foreignKey: 'mealID'
+        foreignKey: 'mealID',
+        onDelete: 'CASCADE',  // Adding cascading behavior
+        onUpdate: 'CASCADE'
       });
     };
   

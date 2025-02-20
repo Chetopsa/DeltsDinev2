@@ -2,6 +2,7 @@ import React, { useState, useLayoutEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { IoMenu, IoClose } from 'react-icons/io5';  // Icons for the hamburger menu and close icon
 import { requestAuth } from '../utils/requestAuth';
+import apiUrl from '../utils/global';
 
 
 
@@ -17,7 +18,7 @@ function Navbar() {
   // logout function
   const logout = async () => {
     try {
-      const response = await fetch('/api/logout', {
+      const response = await fetch(apiUrl.url+'/api/logout', {
         method: 'POST',
         credentials: 'include', // Include session cookies
         headers: {

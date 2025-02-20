@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import apiUrl from "../utils/global";
 
 const NameForm = ({closeModal}) => {
   const [inputs, setInputs] = useState({});
@@ -12,7 +13,7 @@ const NameForm = ({closeModal}) => {
   console.log(inputs);
   const handleSubmit = (e) => {
     e.preventDefault();
-    fetch("/api/setUser", {
+    fetch(apiUrl.url+"/api/setUser", {
       headers: {
         "Content-Type": "application/json",
       },

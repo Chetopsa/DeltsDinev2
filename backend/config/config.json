@@ -16,8 +16,8 @@
   "production": {
     "username": "chet",
     "password": "funny",
-    "database": "database_production",
-    "host": "127.0.0.1",
+    "database": "Deltdb",
+    "host": "postgres",
     "dialect": "postgres"
   }
 }

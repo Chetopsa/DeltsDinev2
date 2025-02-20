@@ -1,4 +1,5 @@
 import React, {useState} from 'react';
+import apiUrl from '../utils/global';
 
 const AddMeal = () => {
     const [meal, setMeal] = useState({
@@ -34,7 +35,7 @@ const AddMeal = () => {
     
     const handleSubmit = (e) => {
         e.preventDefault();
-        fetch("/api/addMeal", {
+        fetch(apiUrl.url+"/api/addMeal", {
             headers: {
                 "content-type": "application/json",
             },

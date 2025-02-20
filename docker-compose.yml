@@ -1,0 +1,48 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_USER: chet
+      POSTGRES_PASSWORD: funny
+      POSTGRES_DB: Deltdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  backend:
+    build: ./backend
+    restart: always
+    environment:
+      REACT_APP_API_URL: http://backend:5001  # The backend URL for the frontend
+      DATABASE_URL: postgresql://chet:funny@postgres:5432/Deltdb
+      
+    depends_on:
+      - postgres
+    ports:
+      - "5001:5001"
+    networks:
+      - app-network
+    
+    
+
+
+  frontend:
+    build: ./client
+    restart: always
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+    networks:
+      - app-network
+
+volumes:
+  pgdata:
+
+networks:
+  app-network:
+    driver: bridge

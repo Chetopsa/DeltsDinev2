@@ -7,16 +7,16 @@ var session = require('express-session'); // import session to keep track of use
 var app = express();
 
 const passport = require('./passport'); // import the passport configuration
-
+const PORT = 80;
 // use sequelize orm for database
 const db = require("./models");
 const {User, Meal, RSVP} = require('./models');
 
 const cors = require('cors'); // allows for cross orgin requests liek when using google auth
 const { user } = require('./config/config');
-const FRONTENDURL = "http://localhost:3000";
+const FRONTENDURL = "http://localhost:80"; // make null for dev
 app.use(cors({
-    origin: 'http://localhost:3000', // or your frontend's URL
+    origin: FRONTENDURL || 'http://localhost:3000', // or your frontend's URL
     methods: ['GET', 'POST'],
     credentials: true, // allow cookies to be sent
   }));
@@ -106,7 +106,7 @@ app.get('/api/validation', (req,res) => {
  })
 
 // define the callback route for Google
-app.get('/auth/google/callback', passport.authenticate('google', { failureRedirect: 'http://localhost:3000/' }), async (req, res) => {
+app.get('/auth/google/callback', passport.authenticate('google', { failureRedirect: FRONTENDURL || 'http://localhost:3000/' }), async (req, res) => {
     // successful authentication, redirect to another page
 
     req.session.isAuthenticated = true;
@@ -127,10 +127,10 @@ app.get('/auth/google/callback', passport.authenticate('google', { failureRedire
     if (req.user.firstName == null) {
         // console.log(req.session.isAuthenticated +"\n");
          // associate the UserID with the session object
-        res.redirect('http://localhost:3000/?signUp=true');
+        res.redirect(FRONTENDURL || 'http://localhost:3000/?signUp=true');
         // res.redirect('http://localhost:3000/');
     } else {
-        res.redirect('http://localhost:3000/?signUp=false');
+        res.redirect(FRONTENDURL || 'http://localhost:3000/?signUp=false');
     }
   }
 );
@@ -518,9 +518,26 @@ app.get('/deletequew392934', isAuthenticated, isAdmin, (req, res) => {
     useful for devlopment but probably shouldn't be used in production because we might
     accidently drop a table if we alter our model schema
 */
-db.sequelize.sync({alter: true}).then((req) => {
-    app.listen(3001, () => {
-        console.log("lsitneing on:  http://localhost:3001\n");
+// db.sequelize.sync({alter: true}).then((req) => {
+//     app.listen(3001, () => {
+//         console.log("lsitneing on: "+ FRONTENDURL ||  " http://localhost:3001\n");
 
+//     });
+// });
+
+db.sequelize.sync({ force: true }).then(() => {
+    // Sync Meal model first
+    return db.Meal.sync();
+  }).then(() => {
+    // Sync User model second
+    return db.User.sync();
+  }).then(() => {
+    // Finally, sync RSVP model, which depends on Meal and User
+    return db.RSVP.sync();
+  }).then(() => {
+    app.listen(3001, () => {
+      console.log("Listening on: " + (process.env.FRONTENDURL || "http://localhost:3001\n"));
     });
-});
+  }).catch((err) => {
+    console.error('Error syncing models:', err);
+  });
