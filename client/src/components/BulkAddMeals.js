@@ -1,9 +1,17 @@
 import React, { useState } from 'react';
 import {Button} from './ui/Button';
 import { Card, CardHeader, CardTitle, CardContent } from './ui/Card';
+import Alert from './ui/Alert';
+
+function getDateOnly(date) {
+  const d = new Date(date);
+  d.setUTCHours(0, 0, 0, 0); // Set to midnight UTC
+  return d;
+}
 
 const BulkAddMeals = () => {
   const [startDate, setStartDate] = useState('');
+  const [dateError, setDateError] = useState('');
   const [meals, setMeals] = useState([]);
   const defaultMeals = {
     Monday: { lunch: '', dinner: '' },
@@ -17,20 +25,32 @@ const BulkAddMeals = () => {
   const [descriptions, setDescriptions] = useState(defaultMeals);
   const [spotsAvailable, setSpotsAvailable] = useState(10);
 
+
   const generateDates = (startDate) => {
     const dates = [];
-    const start = new Date(startDate);
+    const start = getDateOnly(new Date(startDate));
     
     for (let i = 0; i < 7; i++) {
-      const currentDate = new Date(start);
+      const currentDate = getDateOnly(new Date(start));
       currentDate.setDate(start.getDate() + i);
+      // console.log(currentDate);
       dates.push(currentDate.toISOString().split('T')[0]);
     }
+    // console.log(dates);
     return dates;
   };
 
   const handleStartDateChange = (e) => {
-    setStartDate(e.target.value);
+    const selectedDate = new Date(e.target.value);
+    const dayOfWeek = selectedDate.getDay();
+    
+    if (dayOfWeek !== 0) {
+      setDateError('Please select a Monday as the start date');
+      setStartDate(e.target.value); // Still update the date to show the error state
+    } else {
+      setDateError('');
+      setStartDate(e.target.value);
+    }
   };
 
   const handleDescriptionChange = (day, mealType, value) => {
@@ -44,7 +64,7 @@ const BulkAddMeals = () => {
   };
 
   const getDayName = (dateStr) => {
-    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
     const date = new Date(dateStr);
     return days[date.getDay()];
   };
@@ -52,12 +72,17 @@ const BulkAddMeals = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const dates = generateDates(startDate);
+    // console.log(dates)
     const mealPromises = [];
 
     dates.forEach(date => {
       const dayName = getDayName(date);
       
       // Add lunch if description exists
+      console.log(descriptions[dayName].lunch);
+      // console.log(spotsAvailable);
+      console.log(date+"\n\n");
+      
       if (descriptions[dayName].lunch) {
         mealPromises.push(
           fetch("/api/addMeal", {
@@ -122,6 +147,9 @@ const BulkAddMeals = () => {
                   required
                   className="w-full px-3 py-2 border rounded-md"
                 />
+                {dateError && (
+                  <Alert className="mt-2" message={dateError}></Alert>
+                )}
               </div>
               
               <div>
@@ -168,6 +196,7 @@ const BulkAddMeals = () => {
             </div>
 
             <Button 
+              disabled={!!dateError}
               type="submit" 
               className="w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded-md"
             >

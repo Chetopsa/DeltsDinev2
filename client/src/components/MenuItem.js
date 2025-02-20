@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { Trash2 } from "lucide-react";
 
-const MenuItem = ({ item, onSelect, isSelected, isAdmin, disabled, onDelete, onDeleteItem, isRegistered }) => {
+const MenuItem = ({ item, onSelect, isSelected, isAdmin, disabled, onDelete, onDeleteItem, isRegistered, className }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [hoverTimeout, setHoverTimeout] = useState(null);
 
   const handleMouseEnter = () => {
     const timeout = setTimeout(() => {
       setIsHovered(true);
-    }, 400);
+    }, 900);
     setHoverTimeout(timeout);
   };
 
@@ -36,7 +36,7 @@ const MenuItem = ({ item, onSelect, isSelected, isAdmin, disabled, onDelete, onD
         rounded-lg 
         shadow-md 
         w-48
-        h-64
+        h-76
         mx-2
         transition-all
         duration-200
@@ -46,7 +46,8 @@ const MenuItem = ({ item, onSelect, isSelected, isAdmin, disabled, onDelete, onD
             ? "bg-blue-50 border-2 border-blue-500" 
             : "bg-white hover:bg-gray-50 hover:shadow-lg cursor-pointer"
         }
-      `}
+      `+ (className ? ` ${className}` : "")
+    }
     >
       {/* Admin Delete Button - Positioned at top right */}
       {isAdmin && (
@@ -70,9 +71,18 @@ const MenuItem = ({ item, onSelect, isSelected, isAdmin, disabled, onDelete, onD
       </div>
 
       <p className="text-sm text-gray-700 text-center flex-grow">
-        {item.description}
+        {item.description} CRAZY CHICKEN WITH PORK AND RICE AND JUCIE FOR DESSERT LOTS OF STUFF FOR DESSERT
       </p>
-
+      {isHovered && item.names.length > 0 && (
+        <div className="mt-2 w-full max-h-18 overflow-y-auto text-center px-2 border-t border-gray-200 pt-1">
+          <p className="text-sm font-medium text-gray-700">Attendees:</p>
+          {item.names.map((name, index) => (
+            <>
+            <p key={index} className="text-sm text-gray-600  py-0.5">{name}</p>
+            </>
+          ))}
+        </div>
+      )}
       <div className="mt-auto">
         <p className={`text-sm font-medium ${isFull ? "text-red-500" : "text-green-500"}`}>
           {status}
@@ -95,14 +105,7 @@ const MenuItem = ({ item, onSelect, isSelected, isAdmin, disabled, onDelete, onD
         )}
       </div>
 
-      {isHovered && item.names.length > 0 && (
-        <div className="absolute top-full mt-2 left-0 right-0 p-2 bg-white rounded-md shadow-lg z-10">
-          <p className="text-sm font-medium text-gray-700 mb-1">Attendees:</p>
-          {item.names.map((name, index) => (
-            <p key={index} className="text-sm text-gray-600">{name}</p>
-          ))}
-        </div>
-      )}
+      
     </div>
   );
 };

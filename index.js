@@ -145,18 +145,18 @@ app.post('/api/logout', isAuthenticated, (req, res) => {
       }
     });
   });
-// calculate the week id helper function (difference in # of weeks from 2024-01-01)
+/* calculate the week id helper function (difference in # of weeks from 2024-01-01)
+*  @param {date} Date object
+*/ 
 function calculateWeekID(date) {
-    const startDate = new Date('2024-01-01T00:00:00.000-06:00'); // Specify CST offset explicitly
-    // console.log("DATE IN FUNCION: " + date);
-    const mealDate = new Date(date + "T00:00:00.000-06:00");
-
-    // console.log(startDate +" <- start date, meal date -> " + mealDate);
-    const diffTime = Math.abs(mealDate - startDate);
+    const startDate = new Date('2024-01-01T00:00:00Z'); // use  UTC time
+    
+    const diffTime = Math.abs(date - startDate);
     const diffWeeks = Math.floor(diffTime / (1000 * 60 * 60 * 24 * 7));
     // console.log("diff weeks: " + diffWeeks);
     return diffWeeks;
 }
+
 // sync database, a function that ensures that the number of rsvps is the same as the number of spots avaliable - 
 // ?? TODO
 
@@ -175,10 +175,10 @@ app.post('/api/addMeal', isAuthenticated, isAdmin, async (req, res) => {
     
     // calculate week id, so we can group meals by week
     
-    const mealDate = new Date(date + "T00:00:00.000-06:00");
+    const mealDate = new Date(date + "T00:00:00Z");
     // console.log(startDate +" <- start date, meal date -> " + mealDate);
-    
-    const weekID_ = calculateWeekID(date);
+    const weekID_ = calculateWeekID(mealDate); 
+    console.log(mealDate.getDay());
     // can't create new meal if one already exists for that date and time
     const meal = await Meal.findOne({where: {date: mealDate, isDinner: isDinner}});
     if (meal) {
@@ -188,7 +188,7 @@ app.post('/api/addMeal', isAuthenticated, isAdmin, async (req, res) => {
     }
     // console.log("diff weeks: " + diffWeeks);
     await Meal.create({
-        date: mealDate,
+        date: date, // date is the string in the format yyyy-mm-dd
         description: description,
         isDinner: isDinner,
         dayOfWeek: mealDate.getDay(),
@@ -200,7 +200,6 @@ app.post('/api/addMeal', isAuthenticated, isAdmin, async (req, res) => {
         res.status(500).send("Server error when adding meal")
         console.log(err);
     });
-    // res.status(200).send("Succesfully added meal")
 });
 /**
  * API for adding edditing meals in the database
@@ -210,7 +209,7 @@ app.post('/api/addMeal', isAuthenticated, isAdmin, async (req, res) => {
  */
 app.post('/api/editMeal', isAuthenticated, isAdmin, async (req, res) => {
     const {date, description, isDinner, spotsAvaliable} = req.body;
-    const mealDate = new Date(date + "T00:00:00.000-06:00");
+    const mealDate = new Date(date + "T00:00:00.000");
     try {
         // find meal by date and isDinner, ensure meal exists
         const meal = await Meal.findOne({where: {date: mealDate, isDinner: isDinner}});
@@ -232,9 +231,9 @@ app.post('/api/editMeal', isAuthenticated, isAdmin, async (req, res) => {
  * API for deleting meals from the db
  * @request POST
  * @body {mealID: int}
- * @response 200 ok || 500 server error
+ * @response 200 ok {success:bool} || 500 server error
  */
-app.post('api/deleteMeal', isAuthenticated, isAdmin, async (req, res) => {
+app.post('/api/deleteMeal', isAuthenticated, isAdmin, async (req, res) => {
     console.log("hit delete meal endpoint");
     const {mealID} = req.body;
     if (!mealID) {
@@ -242,14 +241,14 @@ app.post('api/deleteMeal', isAuthenticated, isAdmin, async (req, res) => {
         return;
     }
     try {
-        await RSVP.destroy({where: {mealID: mealID}});
         const meal = await Meal.findOne({where: {mealID: mealID}});
         if (!meal) {
             res.status(500).send("Meal does not exist");
             return;
         }
+        await RSVP.destroy({where: {mealID: mealID}});
         await Meal.destroy({where: {mealID: mealID}});
-        res.status(200).send("Meal deleted");
+        res.status(200).json({success: true, message: "Meal deleted"});
     } catch (err) {
         console.log(err);
         res.status(500).send("Server error when deleting meal");
@@ -260,30 +259,32 @@ app.post('api/deleteMeal', isAuthenticated, isAdmin, async (req, res) => {
 /**
  * API for fetchiing current week meal info for user
  * @request POST
- * @body {Date: currentDate}
+ * @body {String ("yyyy-mm-dd"): currentDate}
  * @response {meals: [{mealID: int, mealName: string, mealDescription: string, mealDate: date}]}
  */
 app.post('/api/getMenu', isAuthenticated, async (req, res) => {
     try {
         // console.log("hit get menu endpoint\n");
-        
         const {currentDate} = req.body;
-        // console.log("date: " + currentDate);
+        
+
+        console.log("date: " + currentDate);
 
         if (!currentDate) {
             res.status(400).send("not a valid date");
+            return;
         }
         // get the week ID
-        const weekID_ = calculateWeekID(currentDate.split('T')[0]);
-
+        const weekID_ = calculateWeekID(new Date(currentDate + "T00:00:00Z"));
+        console.log("weekID: " + weekID_);
         // incase we want to use current day for anything
-        const mealDate = new Date(currentDate + "T00:00:00.000-06:00");
+        const mealDate = new Date(currentDate + "T00:00:00.000");
         // querty db for all meals for the week
 
         const meals = await Meal.findAll({where: {weekID: weekID_}});
         const packagedMeals = meals.map(meal => ({
             mealID: meal.dataValues.mealID,
-            date: meal.dataValues.date.toISOString().split('T')[0],
+            date: meal.dataValues.date,
             description: meal.dataValues.description,
             isDinner: meal.dataValues.isDinner,
             dayOfWeek: meal.dataValues.dayOfWeek,
@@ -293,6 +294,7 @@ app.post('/api/getMenu', isAuthenticated, async (req, res) => {
         }));
         if (!meals) {
             res.status(500).send("Server error when fetching meals");
+            return;
         }
         // console.log(packagedMeals);
         res.json({meals: packagedMeals});
@@ -328,7 +330,7 @@ app.post('/api/newRSVP', isAuthenticated, async (req, res) => {
         res.json({success: false, message: "User is on a full meal plan"});
         return;
     }
-    //make sure meal is't monday dinner
+    //make sure meal isn't monday dinner
     if (meal.isDinner && meal.dayOfWeek == 1) {
         res.json({success: false, message: "Can't register for Monday Dinner"});
         return;
@@ -411,14 +413,16 @@ app.post('/api/deleteRSVP', isAuthenticated, async (req, res) => {
 app.get('/api/getRSVPs', isAuthenticated, async (req, res) => {
    // get the date from the query parameters
     const date = req.query.date;
+    
     if (!date) {
         res.status(400).send("No date provided");
         return;
     }
     // console.log(typeof date + " <-- type of date  ");
-    const weekID = calculateWeekID(date.split('T')[0]);
+    const weekID = calculateWeekID(new Date(date + "T00:00:00Z"));
     if (!weekID) {
         res.status(400).send("No weekID provided");
+        return;
     }
     try {
         const currentUserSelectedMeals = [];

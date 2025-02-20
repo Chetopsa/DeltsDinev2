@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Image } from 'react';
 import NameForm from '../components/NameForm';
 import { useLocation, useNavigate } from 'react-router-dom';
 
@@ -21,7 +21,15 @@ const Home = () => {
 
     return (
        <>
-        sup bitch
+        <div className="text-center bg-gray-100 p-12 font-sans">
+            <h1 className="text-3xl text-gray-800">Welcome to Delts Dine</h1>
+            <p className="text-lg text-gray-600 mt-4">Click the Bear to visit the Menu</p>
+            <a href="/menu" className="inline-block mt-6 px-6 py-3"> 
+              <img src="/DTD_Dine.png" alt="food" width="500" height="500"/>
+            </a>
+           
+        </div>
+
         
         {isModalOpen && <NameForm closeModal={closeModal}/>}
        </>

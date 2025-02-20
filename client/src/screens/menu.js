@@ -32,7 +32,7 @@ const WeekNavigator = ({ currentDate, onPreviousWeek, onNextWeek }) => {
 
   const getWeekRange = (date) => {
     const startOfWeek = new Date(date);
-    startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+    startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay()+1);
     const endOfWeek = new Date(startOfWeek);
     endOfWeek.setDate(startOfWeek.getDate() + 6);
     return {
@@ -98,19 +98,21 @@ const Menu = () => {
       }
     };
     fetchIsAdmin();
+    const dateString = currentDate.toISOString().split("T")[0];
+    console.log("dateString: " + dateString);
     const fetchMenu = async () => {
       try {
         const res = await fetch("/api/getMenu", {
           headers: { "content-type": "application/json" },
           method: "POST",
           credentials: "include",
-          body: JSON.stringify({ currentDate }),
+          body: JSON.stringify({currentDate: dateString}),
         });
 
         if (!res.ok) throw new Error("Server gave bad response for getting menu");
 
         const data = await res.json();
-        const dayMap = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+        const dayMap = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
         
         const transformedMeals = data.meals.map((meal) => ( {
           mealID: meal.mealID,
@@ -135,7 +137,7 @@ const Menu = () => {
     };
     const fetchRSVPS = async (updatedMeals) => {
       try {
-        const res = await fetch("/api/getRSVPs?date=" +currentDate.toISOString(), {
+        const res = await fetch("/api/getRSVPs?date=" +currentDate.toISOString().split('T')[0], {
           method: "GET",
           credentials: "include",
         });
@@ -271,20 +273,22 @@ const Menu = () => {
   const handleDeleteItem = async (mealID) => {
     try {
       const res = await fetch("/api/deleteMeal", {
-        methond: "POST",
-        body: JSON.stringify({ mealID }),
+        method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
+        body: JSON.stringify({ mealID }),
       });
       const data = await res.json();
       if (!data.success) {
-        throw new Error("error deletign messages");
+        throw new Error("error deleting messages");
       }
+      // refresh menu to reflect deleted item
+      setCurrentDate(new Date(currentDate));
     } catch (err) {
       setAlert({ type: "error", message: "Failed to delete meal" });
       console.log("failed to delete meal: " +err);
     }
-  }
+  };
 
   return (
     <div className="flex flex-col items-center">
@@ -315,16 +319,19 @@ const Menu = () => {
 
       <div className="w-full mb-8">
         <h2 className="text-2xl font-semibold mb-4 text-center">Lunch</h2>
-        <div className="flex overflow-x-auto pb-4 gap-2 justify-center">
+        <div className="flex overflow-x-auto pb-4 gap-2 px-4 min-w-full">
           {lunchMeals.map((meal) => (
             <MenuItem
               key={meal.mealID}
               item={meal}
               onSelect={handleMealSelect}
               onDelete={handleDeleteRSVP}
+              onDeleteItem={handleDeleteItem}
+              isAdmin={isAdmin}
               isSelected={selectedMeals.includes(meal.mealID)}
               isRegistered={registeredMeals.includes(meal.mealID)}
               disabled={selectedMeals.length + registeredMeals.length >= 2 && !selectedMeals.includes(meal.mealID)}
+              className="first:ml-auto last:mr-auto"
             />
           ))}
         </div>
@@ -332,7 +339,7 @@ const Menu = () => {
 
       <div className="w-full">
       <h2 className="text-2xl font-semibold mb-4 text-center">Dinner</h2>
-      <div className="flex overflow-x-auto pb-4 gap-2 justify-center">
+      <div className="flex overflow-x-auto pb-4 gap-2 pl-4 md:pl-8">
         {dinnerMeals.map((meal) => (
           <MenuItem
             key={meal.mealID}
@@ -344,6 +351,7 @@ const Menu = () => {
             isSelected={selectedMeals.includes(meal.mealID)}
             isRegistered={registeredMeals.includes(meal.mealID)}
             disabled={selectedMeals.length + registeredMeals.length >= 2 && !selectedMeals.includes(meal.mealID)}
+            className="first:ml-auto last:mr-auto"
           />
         ))}
       </div>
