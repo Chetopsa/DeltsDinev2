@@ -34,7 +34,7 @@ const AddMeal = () => {
     
     const handleSubmit = (e) => {
         e.preventDefault();
-        fetch("http://localhost:3001/api/addMeal", {
+        fetch("/api/addMeal", {
             headers: {
                 "content-type": "application/json",
             },

@@ -17,7 +17,6 @@ import AdminDashboard from './screens/adminDashboard';
 
 function App(children) {
 
-
   return (
       
         <BrowserRouter>
